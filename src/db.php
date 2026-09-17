@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+
+ob_start(function(string $html): string {
+    $html=str_replace('<title>FW Verwaltung</title>','<title>FwDesk Halchter – Die digitale Einsatzdoku für Feuerwehren</title>',$html);
+    $html=str_replace('<strong>🚒 FW Verwaltung</strong>','<strong>🚒 FwDesk Halchter</strong><div style="font-size:13px;opacity:.8;margin-top:3px">Die digitale Einsatzdoku für Feuerwehren</div>',$html);
+    return $html;
+});
+
 $dbPath=__DIR__.'/../data/fw.sqlite';
 if(!is_dir(dirname($dbPath))) mkdir(dirname($dbPath),0775,true);
 $db=new PDO('sqlite:'.$dbPath);
