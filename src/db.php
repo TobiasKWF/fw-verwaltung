@@ -26,7 +26,7 @@ foreach($required as $column=>$definition)if(!in_array($column,$existing,true))$
 if(!in_array('divera_id',$existing,true))$db->exec("ALTER TABLE incidents ADD COLUMN divera_id TEXT DEFAULT ''");
 $pc=$db->query('PRAGMA table_info(personnel)')->fetchAll(PDO::FETCH_ASSOC);$pe=array_column($pc,'name');
 if(!in_array('vehicle_id',$pe,true))$db->exec('ALTER TABLE personnel ADD COLUMN vehicle_id INTEGER DEFAULT NULL');
-if(!in_array('user_id',$pe,true))$db->exec('ALTER TABLE personnel ADD COLUMN user_id TEXT DEFAULT ''');
+if(!in_array('user_id',$pe,true))$db->exec("ALTER TABLE personnel ADD COLUMN user_id TEXT DEFAULT ''");
 if(in_array('function',$pe,true))$db->exec('ALTER TABLE personnel DROP COLUMN function');
 if((int)$db->query('SELECT COUNT(*) FROM vehicles')->fetchColumn()===0){$s=$db->prepare('INSERT INTO vehicles(name,call_sign) VALUES(?,?)');$s->execute(['LF 8','LF 8']);$s->execute(['MTW','MTW']);}
 function h(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
