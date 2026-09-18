@@ -69,7 +69,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $items=$payload['data']['items']??$payload['items']??$payload['data']??[];
   if(isset($items['items'])&&is_array($items['items']))$items=$items['items'];
   if(!is_array($items))$items=[];
-  $imported=0;$updated=0;$skipped=0;$find=$db->prepare('SELECT id FROM personnel WHERE user_id=? LIMIT 1');$ins=$db->prepare('INSERT INTO personnel(name,user_id) VALUES(?,?)');$upd=$db->prepare('UPDATE personnel SET name=?,user_id=?,active=1 WHERE id=?');
+  $imported=0;$updated=0;$skipped=0;$find=$db->prepare('SELECT id FROM personnel WHERE user_id=? OR (user_id='' AND lower(trim(name))=lower(trim(?))) ORDER BY CASE WHEN user_id=? THEN 0 ELSE 1 END,id LIMIT 1');$ins=$db->prepare('INSERT INTO personnel(name,user_id) VALUES(?,?)');$upd=$db->prepare('UPDATE personnel SET name=?,user_id=?,active=1 WHERE id=?');
   foreach($items as $item){
    if(!is_array($item))continue;
    $userId=trim((string)($item['user_id']??$item['id']??$item['foreign_id']??''));
@@ -78,7 +78,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    $name=trim(preg_replace('/\s+/',' ',trim($first.' '.$last)));
    if($name==='')$name=trim((string)($item['name']??$item['display_name']??''));
    if($userId===''||$name===''){$skipped++;continue;}
-   $find->execute([$userId]);$existingPerson=$find->fetchColumn();
+   $find->execute([$userId,$name,$userId]);$existingPerson=$find->fetchColumn();
    if($existingPerson){$upd->execute([$name,$userId,(int)$existingPerson]);$updated++;}else{$ins->execute([$name,$userId]);$imported++;}
   }
   header('Location:?action=master&divera=users_imported&count='.$imported.'&updated='.$updated.'&skipped='.$skipped);exit;
