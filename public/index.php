@@ -35,7 +35,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $key=$diveraAccessKey;
   if($key===''){header('Location:?divera=no_key');exit;}
   $url='https://divera247.com/api/v2/alarms?accesskey='.rawurlencode($key);
-  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
+  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
   $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
   if($response===false||$http<200||$http>=300){$msg=$error!==''?$error:'HTTP '.$http;header('Location:?divera=error&msg='.rawurlencode($msg));exit;}
   $payload=json_decode($response,true);
@@ -60,7 +60,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $key=$diveraAccessKey;
   if($key===''){header('Location:?action=master&divera=users_no_key');exit;}
   $url='https://www.divera247.com/api/users?accesskey='.rawurlencode($key);
-  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
+  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
   $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
   if($response===false||$http<200||$http>=300){$msg=$error!==''?$error:'HTTP '.$http;header('Location:?action=master&divera=users_error&msg='.rawurlencode($msg));exit;}
   $payload=json_decode($response,true);
