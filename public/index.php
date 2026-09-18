@@ -4,9 +4,37 @@ $vehicles=$db->query("SELECT * FROM vehicles WHERE active=1 ORDER BY name")->fet
 $people=$db->query("SELECT * FROM personnel WHERE active=1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $action=$_GET['action']??'home';
 $editId=(int)($_GET['id']??0);
+$diveraAccessKey=(string)($db->query("SELECT value FROM settings WHERE key='divera_access_key'")->fetchColumn()??'');
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $form=$_POST['form']??'';
+ if($form==='divera_settings'){
+  $key=trim($_POST['divera_access_key']??'');
+  $s=$db->prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');$s->execute(['divera_access_key',$key]);
+  header('Location:?action=master&divera=saved');exit;
+ }
+ if($form==='divera_import'){
+  $key=$diveraAccessKey;
+  if($key===''){header('Location:?divera=no_key');exit;}
+  $url='https://app.divera247.com/api/v2/alarms?accesskey='.rawurlencode($key);
+  $ch=curl_init($url);
+  curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
+  $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
+  if($response===false||$http<200||$http>=300){$msg=$error!==''?$error:'HTTP '.$http;header('Location:?divera=error&msg='.rawurlencode($msg));exit;}
+  $payload=json_decode($response,true);
+  if(!is_array($payload)||($payload['success']??false)!==true){header('Location:?divera=error&msg='.rawurlencode('Ungültige Divera-Antwort'));exit;}
+  $items=$payload['data']['items']??[];$imported=0;$skipped=0;
+  $check=$db->prepare('SELECT id FROM incidents WHERE divera_id=? OR incident_number=? LIMIT 1');
+  $ins=$db->prepare('INSERT INTO incidents(incident_number,title,location,incident_date,alarm_time,divera_id) VALUES(?,?,?,?,?,?)');
+  foreach($items as $item){
+   $foreign=trim((string)($item['foreign_id']??''));$title=trim((string)($item['title']??''));$address=trim((string)($item['address']??''));
+   if($foreign===''||$title===''){continue;}
+   $check->execute([$foreign,$foreign]);if($check->fetchColumn()){ $skipped++;continue; }
+   $ts=(int)($item['date']??time());$date=date('Y-m-d',$ts);$time=date('H:i',$ts);
+   $ins->execute([$foreign,$title,$address,$date,$time,$foreign]);$imported++;
+  }
+  header('Location:?divera=imported&count='.$imported.'&skipped='.$skipped);exit;
+ }
  if($form==='person'){
   $id=(int)($_POST['id']??0);$name=trim($_POST['name']??'');
   if($name!==''){if($id>0){$s=$db->prepare('UPDATE personnel SET name=? WHERE id=?');$s->execute([$name,$id]);}else{$s=$db->prepare('INSERT INTO personnel(name) VALUES(?)');$s->execute([$name]);}}
@@ -56,7 +84,7 @@ headerHtml();
 if($action==='new'){incidentForm($db,$vehicles,$people);}
 elseif($action==='edit'){$s=$db->prepare('SELECT * FROM incidents WHERE id=?');$s->execute([$editId]);$incident=$s->fetch(PDO::FETCH_ASSOC);if(!$incident)echo '<div class="card"><h1>Einsatz nicht gefunden</h1></div>';else incidentForm($db,$vehicles,$people,$incident);}
 elseif($action==='master'){
- echo '<div class="card"><h1>Stammdaten</h1><p class="muted">Personal und Fahrzeuge können hier direkt bearbeitet werden. Eine feste Zuordnung von Personal zu einem Fahrzeug gibt es nicht.</p></div><div class="master-grid">';
+ echo '<div class="card"><h1>Stammdaten</h1><p class="muted">Personal und Fahrzeuge können hier direkt bearbeitet werden. Eine feste Zuordnung von Personal zu einem Fahrzeug gibt es nicht.</p><h2>🔗 Divera 24/7</h2><form method="post"><input type="hidden" name="form" value="divera_settings"><label>AccessKey</label><input type="password" name="divera_access_key" value="'.h($diveraAccessKey).'" placeholder="Divera AccessKey" autocomplete="off"><br><button>AccessKey speichern</button></form>'.(($_GET['divera']??'')==='saved'?'<p class="muted">AccessKey gespeichert.</p>':'').'</div><div class="master-grid">';
  echo '<div class="card"><h2>👨‍🚒 Personal</h2><form method="post"><input type="hidden" name="form" value="person"><div><label>Name</label><input name="name" required></div><br><button>Person anlegen</button></form><hr>';foreach($people as $p)echo '<div class="master-row"><form method="post"><input type="hidden" name="form" value="person"><input type="hidden" name="id" value="'.$p['id'].'"><div><label>Name</label><input name="name" value="'.h($p['name']).'" required></div><br><button>Speichern</button></form></div>';echo '</div>';
  echo '<div class="card"><h2>🚒 Fahrzeuge</h2><form method="post"><input type="hidden" name="form" value="vehicle"><div class="inline"><div><label>Bezeichnung</label><input name="name" required placeholder="LF 8"></div><div><label>Funkrufname</label><input name="call_sign" placeholder="LF 8"></div></div><br><button>Fahrzeug anlegen</button></form><hr>';foreach($vehicles as $v)echo '<div class="master-row"><form method="post"><input type="hidden" name="form" value="vehicle"><input type="hidden" name="id" value="'.$v['id'].'"><div class="inline"><div><label>Bezeichnung</label><input name="name" value="'.h($v['name']).'" required></div><div><label>Funkrufname</label><input name="call_sign" value="'.h($v['call_sign']).'"></div></div><br><button>Speichern</button></form></div>';echo '</div>';
 }
@@ -69,7 +97,8 @@ elseif($action==='view'){
  }
 }
 else{
- echo '<div class="card"><h1>Einsätze</h1><p><a class="btn" href="?action=new">+ Neuer Einsatz</a></p>';
+ $diveraStatus=$_GET['divera']??'';$diveraMessage='';if($diveraStatus==='no_key')$diveraMessage='Kein Divera AccessKey hinterlegt. Bitte unter Stammdaten speichern.';elseif($diveraStatus==='imported')$diveraMessage='Divera Import abgeschlossen: '.(int)($_GET['count']??0).' Einsatz(e) importiert, '.(int)($_GET['skipped']??0).' bereits vorhanden/übersprungen.';elseif($diveraStatus==='error')$diveraMessage='Divera Import fehlgeschlagen: '.h($_GET['msg']??'Unbekannter Fehler');
+ echo '<div class="card"><h1>Einsätze</h1><div class="actions"><a class="btn" href="?action=new">+ Neuer Einsatz</a><form method="post" style="display:inline"><input type="hidden" name="form" value="divera_import"><button type="submit">📥 Divera Import</button></form></div>'.($diveraMessage!==''?'<p class="muted">'.$diveraMessage.'</p>':'');
  $rows=$db->query('SELECT * FROM incidents ORDER BY incident_date DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);if(!$rows)echo '<p class="muted">Noch keine Einsätze angelegt.</p>';foreach($rows as $r){$duration='–';if($r['start_time']!==''&&$r['end_time']!==''){[$sh,$sm]=array_map('intval',explode(':',$r['start_time']));[$eh,$em]=array_map('intval',explode(':',$r['end_time']));$mins=($eh*60+$em)-($sh*60+$sm);if($mins<0)$mins+=1440;$duration=floor($mins/60).' Std. '.($mins%60).' Min.';}echo '<div class="master-row"><a href="?action=view&id='.(int)$r['id'].'"><strong>'.h($r['incident_number']).' – '.h($r['title']).'</strong></a><div class="muted">'.h($r['incident_date']).' · '.h($r['location']).' · Dauer: '.h($duration).'</div></div>';}echo '</div>';
 }
 footerHtml();
