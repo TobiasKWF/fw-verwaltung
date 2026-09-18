@@ -35,6 +35,34 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   }
   header('Location:?divera=imported&count='.$imported.'&skipped='.$skipped);exit;
  }
+ if($form==='divera_users_import'){
+  $key=$diveraAccessKey;
+  if($key===''){header('Location:?action=master&divera=users_no_key');exit;}
+  $url='https://www.divera247.com/api/users?accesskey='.rawurlencode($key);
+  $ch=curl_init($url);
+  curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
+  $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
+  if($response===false||$http<200||$http>=300){$msg=$error!==''?$error:'HTTP '.$http;header('Location:?action=master&divera=users_error&msg='.rawurlencode($msg));exit;}
+  $payload=json_decode($response,true);
+  if(!is_array($payload)||(($payload['success']??true)!==true)){header('Location:?action=master&divera=users_error&msg='.rawurlencode('Ungültige Divera-Benutzerantwort'));exit;}
+  $items=$payload['data']['items']??($payload['items']??($payload['data']??[]));
+  if(!is_array($items)){header('Location:?action=master&divera=users_error&msg='.rawurlencode('Keine Benutzerliste in der Divera-Antwort gefunden'));exit;}
+  $imported=0;$updated=0;$skipped=0;
+  $find=$db->prepare('SELECT id FROM personnel WHERE user_id=? LIMIT 1');
+  $ins=$db->prepare('INSERT INTO personnel(name,user_id) VALUES(?,?)');
+  $upd=$db->prepare('UPDATE personnel SET name=?,user_id=?,active=1 WHERE id=?');
+  foreach($items as $item){
+   if(!is_array($item))continue;
+   $userId=trim((string)($item['user_id']??$item['id']??''));
+   $first=trim((string)($item['firstname']??$item['first_name']??''));
+   $last=trim((string)($item['lastname']??$item['last_name']??''));
+   $name=trim(preg_replace('/\\s+/',' ',trim($first.' '.$last)));
+   if($userId===''||$name===''){$skipped++;continue;}
+   $find->execute([$userId]);$existingPerson=$find->fetchColumn();
+   if($existingPerson){$upd->execute([$name,$userId,(int)$existingPerson]);$updated++;}else{$ins->execute([$name,$userId]);$imported++;}
+  }
+  header('Location:?action=master&divera=users_imported&count='.$imported.'&updated='.$updated.'&skipped='.$skipped);exit;
+ }
  if($form==='person'){
   $id=(int)($_POST['id']??0);$name=trim($_POST['name']??'');
   if($name!==''){if($id>0){$s=$db->prepare('UPDATE personnel SET name=? WHERE id=?');$s->execute([$name,$id]);}else{$s=$db->prepare('INSERT INTO personnel(name) VALUES(?)');$s->execute([$name]);}}
@@ -84,8 +112,8 @@ headerHtml();
 if($action==='new'){incidentForm($db,$vehicles,$people);}
 elseif($action==='edit'){$s=$db->prepare('SELECT * FROM incidents WHERE id=?');$s->execute([$editId]);$incident=$s->fetch(PDO::FETCH_ASSOC);if(!$incident)echo '<div class="card"><h1>Einsatz nicht gefunden</h1></div>';else incidentForm($db,$vehicles,$people,$incident);}
 elseif($action==='master'){
- echo '<div class="card"><h1>Stammdaten</h1><p class="muted">Personal und Fahrzeuge können hier direkt bearbeitet werden. Eine feste Zuordnung von Personal zu einem Fahrzeug gibt es nicht.</p><h2>🔗 Divera 24/7</h2><form method="post"><input type="hidden" name="form" value="divera_settings"><label>AccessKey</label><input type="password" name="divera_access_key" value="'.h($diveraAccessKey).'" placeholder="Divera AccessKey" autocomplete="off"><br><button>AccessKey speichern</button></form>'.(($_GET['divera']??'')==='saved'?'<p class="muted">AccessKey gespeichert.</p>':'').'</div><div class="master-grid">';
- echo '<div class="card"><h2>👨‍🚒 Personal</h2><form method="post"><input type="hidden" name="form" value="person"><div><label>Name</label><input name="name" required></div><br><button>Person anlegen</button></form><hr>';foreach($people as $p)echo '<div class="master-row"><form method="post"><input type="hidden" name="form" value="person"><input type="hidden" name="id" value="'.$p['id'].'"><div><label>Name</label><input name="name" value="'.h($p['name']).'" required></div><br><button>Speichern</button></form></div>';echo '</div>';
+ echo '<div class="card"><h1>Stammdaten</h1><p class="muted">Personal und Fahrzeuge können hier direkt bearbeitet werden. Eine feste Zuordnung von Personal zu einem Fahrzeug gibt es nicht.</p><h2>🔗 Divera 24/7</h2><form method="post"><input type="hidden" name="form" value="divera_settings"><label>AccessKey</label><input type="password" name="divera_access_key" value="'.h($diveraAccessKey).'" placeholder="Divera AccessKey" autocomplete="off"><br><button>AccessKey speichern</button></form>'.((($_GET['divera']??'')==='saved')?'<p class="muted">AccessKey gespeichert.</p>':((($_GET['divera']??'')==='users_no_key')?'<p class="muted">Kein Divera AccessKey hinterlegt.</p>':((($_GET['divera']??'')==='users_imported')?'<p class="muted">Divera User-Import: '.(int)($_GET['count']??0).' neu, '.(int)($_GET['updated']??0).' aktualisiert, '.(int)($_GET['skipped']??0).' übersprungen.</p>':((($_GET['divera']??'')==='users_error')?'<p class="muted">Divera User-Import fehlgeschlagen: '.h($_GET['msg']??'Unbekannter Fehler').'</p>':'')))).'</div><div class="master-grid">';
+ echo '<div class="card"><h2>👨‍🚒 Personal</h2><form method="post"><input type="hidden" name="form" value="person"><div><label>Name</label><input name="name" required></div><br><button>Person anlegen</button></form><hr>';foreach($people as $p)echo '<div class="master-row"><form method="post"><input type="hidden" name="form" value="person"><input type="hidden" name="id" value="'.$p['id'].'"><div><label>Name</label><input name="name" value="'.h($p['name']).'" required></div><div class="muted">Divera User-ID: '.h($p['user_id']??'').'</div><br><button>Speichern</button></form></div>';echo '<div class="actions"><form method="post"><input type="hidden" name="form" value="divera_users_import"><button type="submit">📥 Divera User importieren</button></form></div></div>';
  echo '<div class="card"><h2>🚒 Fahrzeuge</h2><form method="post"><input type="hidden" name="form" value="vehicle"><div class="inline"><div><label>Bezeichnung</label><input name="name" required placeholder="LF 8"></div><div><label>Funkrufname</label><input name="call_sign" placeholder="LF 8"></div></div><br><button>Fahrzeug anlegen</button></form><hr>';foreach($vehicles as $v)echo '<div class="master-row"><form method="post"><input type="hidden" name="form" value="vehicle"><input type="hidden" name="id" value="'.$v['id'].'"><div class="inline"><div><label>Bezeichnung</label><input name="name" value="'.h($v['name']).'" required></div><div><label>Funkrufname</label><input name="call_sign" value="'.h($v['call_sign']).'"></div></div><br><button>Speichern</button></form></div>';echo '</div>';
 }
 elseif($action==='view'){
