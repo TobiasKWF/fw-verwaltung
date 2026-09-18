@@ -23,7 +23,7 @@ $cols=$db->query('PRAGMA table_info(incidents)')->fetchAll(PDO::FETCH_ASSOC);
 $required=['incident_number'=>"TEXT DEFAULT ''",'alarm_time'=>"TEXT DEFAULT ''",'incident_leader'=>"TEXT DEFAULT ''",'document_filled_by'=>"TEXT DEFAULT ''",'culprit1_type'=>"TEXT DEFAULT 'Verursacher'",'culprit1_name'=>"TEXT DEFAULT ''",'culprit1_birthdate'=>"TEXT DEFAULT ''",'culprit1_address'=>"TEXT DEFAULT ''",'culprit2_type'=>"TEXT DEFAULT 'Verursacher 2'",'culprit2_name'=>"TEXT DEFAULT ''",'culprit2_birthdate'=>"TEXT DEFAULT ''",'culprit2_address'=>"TEXT DEFAULT ''",'culprit_unknown_type'=>"TEXT DEFAULT 'Unbekannt'",'culprit_unknown_name'=>"TEXT DEFAULT ''",'culprit_unknown_birthdate'=>"TEXT DEFAULT ''",'culprit_unknown_address'=>"TEXT DEFAULT ''"];
 $existing=array_column($cols,'name');
 foreach($required as $column=>$definition)if(!in_array($column,$existing,true))$db->exec("ALTER TABLE incidents ADD COLUMN {$column} {$definition}");
-if(!in_array('divera_id',$existing,true))$db->exec("ALTER TABLE incidents ADD COLUMN divera_id TEXT DEFAULT '');
+if(!in_array('divera_id',$existing,true))$db->exec("ALTER TABLE incidents ADD COLUMN divera_id TEXT DEFAULT ''");
 $pc=$db->query('PRAGMA table_info(personnel)')->fetchAll(PDO::FETCH_ASSOC);$pe=array_column($pc,'name');
 if(!in_array('vehicle_id',$pe,true))$db->exec('ALTER TABLE personnel ADD COLUMN vehicle_id INTEGER DEFAULT NULL');
 if(in_array('function',$pe,true))$db->exec('ALTER TABLE personnel DROP COLUMN function');
