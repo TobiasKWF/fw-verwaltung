@@ -32,4 +32,4 @@ if(!in_array('user_id',$pe,true))$db->exec("ALTER TABLE personnel ADD COLUMN use
 if(in_array('function',$pe,true))$db->exec('ALTER TABLE personnel DROP COLUMN function');
 if((int)$db->query('SELECT COUNT(*) FROM vehicles')->fetchColumn()===0){$s=$db->prepare('INSERT INTO vehicles(name,call_sign) VALUES(?,?)');$s->execute(['LF 8','LF 8']);$s->execute(['MTW','MTW']);}
 function h(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
-$db->exec("ALTER TABLE incident_personnel ADD COLUMN va INTEGER NOT NULL DEFAULT 0");
+$cols=$db->query("PRAGMA table_info(incident_personnel)")->fetchAll(PDO::FETCH_COLUMN,1);if(!in_array("va",$cols,true))$db->exec("ALTER TABLE incident_personnel ADD COLUMN va INTEGER NOT NULL DEFAULT 0");
