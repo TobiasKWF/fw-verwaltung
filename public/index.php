@@ -130,6 +130,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    $find->execute([$userId,$name,$userId]);$existingPerson=$find->fetchColumn();
    if($existingPerson){$upd->execute([$name,$userId,(int)$existingPerson]);$updated++;}else{$ins->execute([$name,$userId]);$imported++;}
   }
+  if($resetUsers)$db->commit();
   header('Location:?action=master&divera=users_imported&count='.$imported.'&updated='.$updated.'&skipped='.$skipped.'&reset='.($resetUsers?'1':'0'));exit;
  }
  if($form==='person'){
