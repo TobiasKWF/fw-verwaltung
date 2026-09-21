@@ -23,11 +23,12 @@ function diveraStatusName(array $statusMap,int $statusId):string{
 function diveraCollectResponses(array $alarm,array $statusMap):array{
  $raw=$alarm['ucr_answered']??[];
  $out=[];
- $add=function($ucr,$value)use(&$out,$statusMap){
+ $add=function($ucr,$value,$outerStatusId=0)use(&$out,$statusMap){
   $obj=is_array($value)?$value:[];
   $id=trim((string)($obj['ucr_id']??$obj['user_cluster_relation_id']??$obj['user_id']??$ucr??''));
   if($id==='')return;
   $statusId=(int)($obj['status_id']??($obj['status']['id']??0));
+  if($statusId===0)$statusId=(int)$outerStatusId;
   $statusName=trim((string)($obj['status_name']??($obj['status']['title']??($obj['status']['name']??''))));
   if($statusName==='')$statusName=diveraStatusName($statusMap,$statusId);
   $note=trim((string)($obj['note']??($obj['status_note']??'')));
@@ -35,16 +36,17 @@ function diveraCollectResponses(array $alarm,array $statusMap):array{
   $out[$id]=['ucr_id'=>$id,'status_id'=>$statusId,'status_name'=>$statusName,'note'=>$note,'responded_at'=>$ts];
  };
  if(is_array($raw))foreach($raw as $k=>$v){
+  $outerStatusId=(int)$k;
   if(is_array($v)&&isset($v['ts'])){
-   $add($k,$v);
+   $add($k,$v,$outerStatusId);
    continue;
   }
   if(is_array($v)){
    foreach($v as $innerId=>$innerValue){
-    if(is_array($innerValue))$add($innerId,$innerValue);
-    else $add($innerId,[]);
+    if(is_array($innerValue))$add($innerId,$innerValue,$outerStatusId);
+    else $add($innerId,['status_id'=>$outerStatusId],$outerStatusId);
    }
-  }else $add($v,[]);
+  }else $add($v,['status_id'=>$outerStatusId],$outerStatusId);
  }
  return array_values($out);
 }
