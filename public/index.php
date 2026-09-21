@@ -112,7 +112,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $imported=0;$updated=0;$skipped=0;$find=$db->prepare("SELECT id FROM personnel WHERE user_id=? OR (user_id='' AND lower(trim(name))=lower(trim(?))) ORDER BY CASE WHEN user_id=? THEN 0 ELSE 1 END,id LIMIT 1");$ins=$db->prepare('INSERT INTO personnel(name,user_id) VALUES(?,?)');$upd=$db->prepare('UPDATE personnel SET name=?,user_id=?,active=1 WHERE id=?');
   foreach($items as $item){
    if(!is_array($item))continue;
-   $userId=trim((string)($item['user_id']??$item['id']??$item['foreign_id']??''));
+   $userId=trim((string)($item['user_cluster_relation_id']??$item['user_id']??$item['id']??$item['foreign_id']??''));
    $first=trim((string)($item['firstname']??$item['first_name']??$item['firstName']??''));
    $last=trim((string)($item['lastname']??$item['last_name']??$item['lastName']??''));
    $name=trim(preg_replace('/\s+/',' ',trim($first.' '.$last)));
