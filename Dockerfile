@@ -11,7 +11,8 @@ WORKDIR /var/www/html
 COPY public/ /var/www/html/
 COPY src/ /var/www/src/
 
-RUN mkdir -p /var/www/data \
+RUN mkdir -p /var/www/data/uploads/incidents \
+    && ln -s /var/www/data/uploads /var/www/html/uploads \
     && chown -R www-data:www-data /var/www/data
 
 EXPOSE 80
