@@ -68,9 +68,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   if(isset($payload['success'])&&$payload['success']!==true){$msg=(string)($payload['message']??$payload['error']??'Divera hat den Einsatzimport abgelehnt');header('Location:?divera=error&msg='.rawurlencode($msg));exit;}
   $items=$payload['data']['items']??$payload['items']??[];
   if(!is_array($items))$items=[];
-  $statusMap=[];
+  $statusMap=[];$userStatusMap=[];
   $pull=diveraJson('https://divera247.com/api/v2/pull/all',$key);
   if(is_array($pull))$statusMap=$pull['data']['cluster']['status']??[];
+  $usersPayload=diveraJson('https://divera247.com/api/users',$key);
+  if(is_array($usersPayload)){
+   $uitems=$usersPayload['data']['items']??$usersPayload['items']??$usersPayload['data']??[];
+   if(isset($uitems['items'])&&is_array($uitems['items']))$uitems=$uitems['items'];
+   if(is_array($uitems))foreach($uitems as $u){if(!is_array($u))continue;$uid=trim((string)($u['user_cluster_relation_id']??$u['ucr_id']??$u['user_id']??$u['id']??''));if($uid!=='')$userStatusMap[$uid]=(int)($u['status_id']??0);}
+  }
   $imported=0;$skipped=0;$responsesTotal=0;
   $check=$db->prepare('SELECT id FROM incidents WHERE divera_id=? OR incident_number=? LIMIT 1');
   $ins=$db->prepare('INSERT INTO incidents(incident_number,title,location,incident_date,alarm_time,divera_id) VALUES(?,?,?,?,?,?)');
@@ -89,8 +95,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    if($alarmId>0){$detail=diveraJson('https://divera247.com/api/v2/alarms/'.$alarmId,$key);if(is_array($detail)&&is_array($detail['data']??null))$alarm=$detail['data'];}
    foreach(diveraCollectResponses($alarm,$statusMap) as $r){
     $findPerson->execute([$r['ucr_id']]);$pid=$findPerson->fetchColumn();if(!$pid)continue;
-    $eligible=stripos($r['status_name'],'nicht einsatzbereit')===false?1:0;
-    $responseIns->execute([$incidentId,(int)$pid,$r['ucr_id'],(int)$r['status_id'],$r['status_name'],$r['note'],(int)$r['responded_at'],$eligible]);
+    $statusId=(int)$r['status_id'];if($statusId===0)$statusId=(int)($userStatusMap[$r['ucr_id']]??0);$statusName=$r['status_name'];if($statusName===''&&$statusId>0)$statusName=diveraStatusName($statusMap,$statusId);$eligible=stripos($statusName,'nicht einsatzbereit')===false?1:0;
+    $responseIns->execute([$incidentId,(int)$pid,$r['ucr_id'],$statusId,$statusName,$r['note'],(int)$r['responded_at'],$eligible]);
     if($eligible)$responsesTotal++;
    }
   }
