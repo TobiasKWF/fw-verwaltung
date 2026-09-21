@@ -17,4 +17,4 @@ RUN mkdir -p /var/www/data/uploads/incidents \
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["sh","-c","chown -R www-data:www-data /var/www/data && exec apache2-foreground"]
