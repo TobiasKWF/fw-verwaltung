@@ -236,6 +236,18 @@ elseif($action==='view'){
   echo '</div></div>'.($photoHtml!==''?'<div class="print-section"><h2>Einsatzbilder</h2><div class="photo-grid">'.$photoHtml.'</div></div>':'').'</div>';
  }
 }
-else{echo '<div class="card"><h1>Einsätze</h1>'.($diveraStatus==='single_imported'?'<p><strong>✅ Divera-Einsatz wurde importiert.</strong></p>':($diveraStatus==='single_exists'?'<p><strong>ℹ️ Einsatz ist bereits vorhanden.</strong></p>':($diveraStatus==='single_error'?'<p><strong>❌ Einzelimport fehlgeschlagen:</strong> '.h($diveraMsg).'</p>':($diveraStatus==='imported'?'<p><strong>✅ Divera Einsatzimport:</strong> '.$diveraCount.' neu, '.$diveraSkipped.' übersprungen, '.$diveraResponses.' passende Rückmeldungen.</p>':($diveraStatus==='no_key'?'<p><strong>⚠️ Kein Divera AccessKey gespeichert.</strong> Bitte unter Stammdaten hinterlegen.</p>':($diveraStatus==='error'?'<p><strong>❌ Divera Einsatzimport fehlgeschlagen:</strong> '.h($diveraMsg).'</p>':''))).'<div class="actions"><a class="btn" href="?action=new">+ Neuer Einsatz</a><form method="post" style="display:inline"><input type="hidden" name="form" value="divera_import"><button type="submit">📥 Divera Import</button></form><form method="post" style="display:flex;gap:8px;align-items:center"><input type="hidden" name="form" value="divera_import_one"><input name="divera_incident_id" placeholder="Divera EinsatzID" style="width:170px" required><button type="submit">📥 Einsatz importieren</button></form></div>'; $rows=$db->query('SELECT * FROM incidents ORDER BY incident_date DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);foreach($rows as $r)echo '<div class="master-row"><a href="?action=view&id='.(int)$r['id'].'"><strong>'.h($r['incident_number']).' – '.h($r['title']).'</strong></a><div class="muted">'.h($r['incident_date']).' · '.h($r['location']).'</div></div>';echo '</div>';}
+else{
+ $homeStatus='';
+ if($diveraStatus==='single_imported')$homeStatus='<p><strong>✅ Divera-Einsatz wurde importiert.</strong></p>';
+ elseif($diveraStatus==='single_exists')$homeStatus='<p><strong>ℹ️ Einsatz ist bereits vorhanden.</strong></p>';
+ elseif($diveraStatus==='single_error')$homeStatus='<p><strong>❌ Einzelimport fehlgeschlagen:</strong> '.h($diveraMsg).'</p>';
+ elseif($diveraStatus==='imported')$homeStatus='<p><strong>✅ Divera Einsatzimport:</strong> '.$diveraCount.' neu, '.$diveraSkipped.' übersprungen, '.$diveraResponses.' passende Rückmeldungen.</p>';
+ elseif($diveraStatus==='no_key')$homeStatus='<p><strong>⚠️ Kein Divera AccessKey gespeichert.</strong> Bitte unter Stammdaten hinterlegen.</p>';
+ elseif($diveraStatus==='error')$homeStatus='<p><strong>❌ Divera Einsatzimport fehlgeschlagen:</strong> '.h($diveraMsg).'</p>';
+ echo '<div class="card"><h1>Einsätze</h1>'.$homeStatus.'<div class="actions"><a class="btn" href="?action=new">+ Neuer Einsatz</a><form method="post" style="display:inline"><input type="hidden" name="form" value="divera_import"><button type="submit">📥 Divera Import</button></form><form method="post" style="display:flex;gap:8px;align-items:center"><input type="hidden" name="form" value="divera_import_one"><input name="divera_incident_id" placeholder="Divera EinsatzID" style="width:170px" required><button type="submit">📥 Einsatz importieren</button></form></div>';
+ $rows=$db->query('SELECT * FROM incidents ORDER BY incident_date DESC,id DESC')->fetchAll(PDO::FETCH_ASSOC);
+ foreach($rows as $r)echo '<div class="master-row"><a href="?action=view&id='.(int)$r['id'].'"><strong>'.h($r['incident_number']).' – '.h($r['title']).'</strong></a><div class="muted">'.h($r['incident_date']).' · '.h($r['location']).'</div></div>';
+ echo '</div>';
+}
 footerHtml();
 ?>
