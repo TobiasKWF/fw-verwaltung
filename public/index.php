@@ -172,9 +172,9 @@ elseif($action==='view'){
  $s=$db->prepare('SELECT * FROM incidents WHERE id=?');$s->execute([$editId]);$i=$s->fetch(PDO::FETCH_ASSOC);
  if(!$i)echo '<div class="card"><h1>Einsatz nicht gefunden</h1></div>';
  else{
-  $q=$db->prepare('SELECT v.name,v.call_sign,p.name AS person_name FROM incident_vehicles iv JOIN vehicles v ON v.id=iv.vehicle_id LEFT JOIN incident_personnel ip ON ip.incident_id=iv.incident_id AND ip.vehicle_id=iv.vehicle_id LEFT JOIN personnel p ON p.id=ip.personnel_id WHERE iv.incident_id=? ORDER BY v.name,p.name');$q->execute([$editId]);$vehicleRows=$q->fetchAll(PDO::FETCH_ASSOC);
+  $q=$db->prepare('SELECT v.name,v.call_sign,p.name AS person_name,ip.va AS person_va FROM incident_vehicles iv JOIN vehicles v ON v.id=iv.vehicle_id LEFT JOIN incident_personnel ip ON ip.incident_id=iv.incident_id AND ip.vehicle_id=iv.vehicle_id LEFT JOIN personnel p ON p.id=ip.personnel_id WHERE iv.incident_id=? ORDER BY v.name,p.name');$q->execute([$editId]);$vehicleRows=$q->fetchAll(PDO::FETCH_ASSOC);
   $vehicleHtml='';$currentVehicle='';
-  foreach($vehicleRows as $vr){if($currentVehicle!==$vr['name']){$currentVehicle=$vr['name'];$vehicleHtml.='<div class="print-section"><h3>🚒 '.h($vr['name']).' <span class="muted">'.h($vr['call_sign']).'</span></h3><ul>';}$vehicleHtml.=($vr['person_name']!==null?'<li>'.h($vr['person_name']).'</li>':'');}
+  foreach($vehicleRows as $vr){if($currentVehicle!==$vr['name']){$currentVehicle=$vr['name'];$vehicleHtml.='<div class="print-section"><h3>🚒 '.h($vr['name']).' <span class="muted">'.h($vr['call_sign']).'</span></h3><ul>';}$vehicleHtml.=($vr['person_name']!==null?'<li>'.h($vr['person_name']).($vr['person_va']?' <strong>(VA)</strong>':'').'</li>':'');}
   foreach($vehicleRows as $idx=>$vr){$next=$vehicleRows[$idx+1]['name']??'';if($next!==$vr['name'])$vehicleHtml.='</ul></div>';}
   if($vehicleHtml==='')$vehicleHtml='<p class="muted">Keine Fahrzeuge zugeordnet.</p>';
   $photoQ=$db->prepare('SELECT * FROM incident_photos WHERE incident_id=? ORDER BY id');$photoQ->execute([$editId]);$photos=$photoQ->fetchAll(PDO::FETCH_ASSOC);
