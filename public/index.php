@@ -6,6 +6,35 @@ $action=$_GET['action']??'home';
 $editId=(int)($_GET['id']??0);
 $diveraAccessKey=(string)($db->query("SELECT value FROM settings WHERE key='divera_access_key'")->fetchColumn()??'');
 
+function diveraJson(string $url,string $key):?array{
+ $ch=curl_init($url.'?accesskey='.rawurlencode($key));curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
+ $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);
+ if($response===false||$http<200||$http>=300)return null;
+ $payload=json_decode($response,true);
+ return is_array($payload)?$payload:null;
+}
+function diveraStatusName(array $statusMap,int $statusId):string{
+ $s=$statusMap[(string)$statusId]??$statusMap[$statusId]??null;
+ if(is_array($s))return trim((string)($s['title']??$s['name']??$s['label']??''));
+ return is_string($s)?trim($s):'';
+}
+function diveraCollectResponses(array $alarm,array $statusMap):array{
+ $raw=$alarm['ucr_answered']??[];
+ $out=[];
+ $add=function($ucr,$value)use(&$out,$statusMap){
+  $obj=is_array($value)?$value:[];
+  $id=trim((string)($obj['ucr_id']??$obj['user_cluster_relation_id']??$obj['user_id']??$ucr??''));
+  if($id==='')return;
+  $statusId=(int)($obj['status_id']??($obj['status']['id']??0));
+  $statusName=trim((string)($obj['status_name']??($obj['status']['title']??($obj['status']['name']??''))));
+  if($statusName==='')$statusName=diveraStatusName($statusMap,$statusId);
+  $note=trim((string)($obj['note']??($obj['status_note']??'')));
+  $ts=(int)($obj['ts']??($obj['timestamp']??($obj['date']??0)));
+  $out[$id]=['ucr_id'=>$id,'status_id'=>$statusId,'status_name'=>$statusName,'note'=>$note,'responded_at'=>$ts];
+ };
+ if(is_array($raw))foreach($raw as $k=>$v){if(is_array($v))$add($k,$v);else $add($v,[]);}
+ return array_values($out);
+}
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $form=$_POST['form']??'';
  if($form==='delete_person'){
@@ -34,16 +63,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  if($form==='divera_import'){
   $key=$diveraAccessKey;
   if($key===''){header('Location:?divera=no_key');exit;}
-  $url='https://divera247.com/api/v2/alarms?accesskey='.rawurlencode($key);
-  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_HTTPHEADER=>['Accept: application/json'],CURLOPT_USERAGENT=>'FwDesk-Halchter/1.0']);
-  $response=curl_exec($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
-  if($response===false||$http<200||$http>=300){$msg=$error!==''?$error:'HTTP '.$http;header('Location:?divera=error&msg='.rawurlencode($msg));exit;}
-  $payload=json_decode($response,true);
-  if(!is_array($payload)){header('Location:?divera=error&msg='.rawurlencode('Divera liefert kein gültiges JSON'));exit;}
+  $payload=diveraJson('https://divera247.com/api/v2/alarms',$key);
+  if(!is_array($payload)){header('Location:?divera=error&msg='.rawurlencode('Divera liefert keine gültige Antwort'));exit;}
   if(isset($payload['success'])&&$payload['success']!==true){$msg=(string)($payload['message']??$payload['error']??'Divera hat den Einsatzimport abgelehnt');header('Location:?divera=error&msg='.rawurlencode($msg));exit;}
   $items=$payload['data']['items']??$payload['items']??[];
   if(!is_array($items))$items=[];
-  $imported=0;$skipped=0;$check=$db->prepare('SELECT id FROM incidents WHERE divera_id=? OR incident_number=? LIMIT 1');$ins=$db->prepare('INSERT INTO incidents(incident_number,title,location,incident_date,alarm_time,divera_id) VALUES(?,?,?,?,?,?)');
+  $statusMap=[];
+  $pull=diveraJson('https://divera247.com/api/v2/pull/all',$key);
+  if(is_array($pull))$statusMap=$pull['data']['cluster']['status']??[];
+  $imported=0;$skipped=0;$responsesTotal=0;
+  $check=$db->prepare('SELECT id FROM incidents WHERE divera_id=? OR incident_number=? LIMIT 1');
+  $ins=$db->prepare('INSERT INTO incidents(incident_number,title,location,incident_date,alarm_time,divera_id) VALUES(?,?,?,?,?,?)');
+  $responseIns=$db->prepare('INSERT OR REPLACE INTO incident_divera_responses(incident_id,personnel_id,divera_ucr_id,status_id,status_name,note,responded_at,eligible) VALUES(?,?,?,?,?,?,?,?)');
+  $findPerson=$db->prepare('SELECT id FROM personnel WHERE user_id=? LIMIT 1');
   foreach($items as $item){
    if(!is_array($item))continue;
    $foreign=trim((string)($item['foreign_id']??$item['id']??''));
@@ -52,9 +84,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    if($foreign===''||$title===''){$skipped++;continue;}
    $check->execute([$foreign,$foreign]);if($check->fetchColumn()){$skipped++;continue;}
    $rawTs=$item['date']??$item['timestamp']??$item['created_at']??time();$ts=is_numeric($rawTs)?(int)$rawTs:strtotime((string)$rawTs);if(!$ts)$ts=time();
-   $ins->execute([$foreign,$title,$address,date('Y-m-d',$ts),date('H:i',$ts),$foreign]);$imported++;
+   $ins->execute([$foreign,$title,$address,date('Y-m-d',$ts),date('H:i',$ts),$foreign]);$incidentId=(int)$db->lastInsertId();$imported++;
+   $alarm=$item;$alarmId=(int)($item['id']??0);
+   if($alarmId>0){$detail=diveraJson('https://divera247.com/api/v2/alarms/'.$alarmId,$key);if(is_array($detail)&&is_array($detail['data']??null))$alarm=$detail['data'];}
+   foreach(diveraCollectResponses($alarm,$statusMap) as $r){
+    $findPerson->execute([$r['ucr_id']]);$pid=$findPerson->fetchColumn();if(!$pid)continue;
+    $eligible=stripos($r['status_name'],'nicht einsatzbereit')===false?1:0;
+    $responseIns->execute([$incidentId,(int)$pid,$r['ucr_id'],(int)$r['status_id'],$r['status_name'],$r['note'],(int)$r['responded_at'],$eligible]);
+    if($eligible)$responsesTotal++;
+   }
   }
-  header('Location:?divera=imported&count='.$imported.'&skipped='.$skipped);exit;
+  header('Location:?divera=imported&count='.$imported.'&skipped='.$skipped.'&responses='.$responsesTotal);exit;
  }
  if($form==='divera_users_import'){
   $key=$diveraAccessKey;
