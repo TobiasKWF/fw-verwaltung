@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/../src/db.php';
+date_default_timezone_set('Europe/Berlin');
 $vehicles=$db->query("SELECT * FROM vehicles WHERE active=1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $people=$db->query("SELECT * FROM personnel WHERE active=1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $action=$_GET['action']??'home';
