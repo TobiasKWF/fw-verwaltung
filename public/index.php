@@ -14,6 +14,8 @@ function diveraJson(string $url,string $key):?array{
  return is_array($payload)?$payload:null;
 }
 function diveraStatusName(array $statusMap,int $statusId):string{
+ $known=[56001=>'Nicht Einsatzbereit',55475=>'sofort',56004=>'innerhalb 10 min',56005=>'30 minuten'];
+ if(isset($known[$statusId]))return $known[$statusId];
  $s=$statusMap[(string)$statusId]??$statusMap[$statusId]??null;
  if(is_array($s))return trim((string)($s['title']??$s['name']??$s['label']??''));
  return is_string($s)?trim($s):'';
