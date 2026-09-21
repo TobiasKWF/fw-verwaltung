@@ -4,6 +4,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libsqlite3-dev pkg-config \
     && docker-php-ext-install pdo_sqlite \
     && a2enmod rewrite \
+    && sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride AuthConfig/' /etc/apache2/apache2.conf \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
