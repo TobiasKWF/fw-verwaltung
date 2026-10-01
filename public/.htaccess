@@ -2,3 +2,5 @@ AuthType Basic
 AuthName "FwDesk Halchter"
 AuthUserFile /var/www/html/.htpasswd
 Require valid-user
+
+php_value auto_prepend_file /var/www/html/print_layout_fix.php
