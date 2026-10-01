@@ -3,7 +3,13 @@
 ob_start(function (string $html): string {
     $html = str_replace('>Bemerkungen</label>', '>Bemerkung/Lage</label>', $html);
     $html = str_replace('<h2>Bemerkungen</h2>', '<h2>Bemerkung/Lage</h2>', $html);
-    $html = str_replace(['🚒', '🚑', '🚓', '🚐', '🚗', '🚙', '🚛', '🚚', '🚘'], '', $html);
+
+    // Fahrzeug-Symbole nur in Fahrzeugüberschriften entfernen; andere Icons der Anwendung bleiben erhalten.
+    $html = preg_replace_callback('/(<h[23][^>]*>)(.*?)(<\/h[23]>)/is', function (array $m): string {
+        $heading = str_replace(['🚒', '🚑', '🚓', '🚐', '🚗', '🚙', '🚛', '🚚', '🚘'], '', $m[2]);
+        return $m[1].$heading.$m[3];
+    }, $html) ?? $html;
+
     $css = '<style id="fwdesk-print-fix">@media print{\n'
          . '@page{size:A4;margin:12mm 12mm 20mm 12mm}\n'
          . 'html,body{width:auto!important;min-width:0!important;background:#fff!important}\n'
