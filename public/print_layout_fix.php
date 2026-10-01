@@ -69,6 +69,8 @@ HTML;
          . '.print-footer{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;clear:both!important;width:100%!important;height:auto!important;box-sizing:border-box!important;margin:14mm 0 0!important;padding:4mm 0 0!important;border-top:1px solid #ddd!important;break-inside:avoid!important;page-break-inside:avoid!important}\n'
          . '.print-section{margin-top:8mm!important;padding-top:3mm!important;break-inside:auto!important;page-break-inside:auto!important}\n'
          . '.print-section>h2,.print-section>h3{break-after:avoid!important;page-break-after:avoid!important}\n'
+         . '.print-section:has(.photo-grid){break-before:page!important;page-break-before:always!important;break-inside:auto!important;page-break-inside:auto!important;margin-top:0!important;padding-top:8mm!important}\n'
+         . '.print-section:has(.photo-grid)>h2{break-after:avoid!important;page-break-after:avoid!important}\n'
          . '.fwdesk-vehicle-block{margin:7mm 0 0!important;padding:0 0 4mm!important;border-bottom:1px solid #ddd!important;break-inside:avoid!important;page-break-inside:avoid!important}\n'
          . '.fwdesk-vehicle-block>h3{margin:0 0 2mm!important;padding:0!important;font-size:11pt!important;break-after:avoid!important;page-break-after:avoid!important}\n'
          . '.fwdesk-vehicle-block>ul{margin:0 0 0 5mm!important;padding:0 0 0 6mm!important;break-before:avoid!important;page-break-before:avoid!important;list-style-type:disc!important}\n'
