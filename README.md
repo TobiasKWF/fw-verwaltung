@@ -2,7 +2,7 @@
 
 **FwDesk – Die digitale Einsatzdoku für Feuerwehren**
 
-Eine schlanke, webbasierte Einsatzdokumentation für Feuerwehren. Die Anwendung läuft als Docker-Container mit **PHP 8.3, Apache und SQLite** und ist für eine einfache, schnelle Dokumentation von Feuerwehreinsätzen ausgelegt.
+Eine schlanke, webbasierte Einsatzdokumentation für Feuerwehren. Die Anwendung läuft als Docker-Container mit **PHP 8.5, Apache und SQLite** und ist für eine einfache, schnelle Dokumentation von Feuerwehreinsätzen ausgelegt.
 
 **Aktuelle Version:** 0.9  
 **Copyright:** T.König 2026
@@ -260,7 +260,7 @@ Benutzerkonto für die HTTP-Authentifizierung.
 
 ### `Dockerfile`
 
-Erstellt das PHP-8.3-Apache-Image inklusive SQLite-Unterstützung und persistentem Datenverzeichnis.
+Erstellt das PHP-8.5-Apache-Image inklusive SQLite-Unterstützung und persistentem Datenverzeichnis.
 
 ---
 
@@ -283,7 +283,7 @@ Die Datenbank wird beim Start automatisch angelegt bzw. um benötigte Felder erw
 
 ## 📱 Mobile Nutzung
 
-Die Oberfläche ist responsive und kann auch auf Smartphones und Tablets verwendet werden.
+Die Oberfläche passt sich an Desktop, Tablet und Smartphone an. Die Navigation bricht auf schmalen Bildschirmen um; Formulare, Stammdaten und Einsatzdetails wechseln dort in einspaltige Layouts. Zeitangaben und Personendaten bleiben übersichtlich angeordnet, und Aktionen lassen sich auf kleinen Displays leichter antippen.
 
 Besonders für die Einsatzdokumentation vor Ort vorgesehen sind:
 
@@ -293,6 +293,9 @@ Besonders für die Einsatzdokumentation vor Ort vorgesehen sind:
 - Besatzungsauswahl
 - DIVERA-Rückmeldungen
 - Bearbeitung bestehender Einsätze
+- gut sichtbare Tastatur-Fokusmarkierungen und kontrastreiche Bedienelemente
+
+Die responsive Gestaltung betrifft die Bildschirmansicht. Der bestehende Ausdruck und die PDF-Ausgabe behalten ihr eigenes Drucklayout.
 
 ---
 
@@ -361,7 +364,7 @@ Anschließend im Browser den Drucker bzw. **Als PDF speichern** auswählen.
 
 ## 🛠️ Technischer Stack
 
-- PHP 8.3
+- PHP 8.5
 - Apache 2
 - SQLite
 - PDO SQLite
