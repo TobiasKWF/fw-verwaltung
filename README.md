@@ -2,7 +2,7 @@
 
 **FwDesk – Die digitale Einsatzdoku für Feuerwehren**
 
-Eine schlanke, webbasierte Einsatzdokumentation für Feuerwehren. Die Anwendung läuft als Docker-Container mit **PHP 8.3, Apache und SQLite** und ist für eine einfache, schnelle Dokumentation von Feuerwehreinsätzen ausgelegt.
+Eine schlanke, webbasierte Einsatzdokumentation für Feuerwehren. Die Anwendung läuft als Docker-Container mit **PHP 8.5, Apache und SQLite** und ist für eine einfache, schnelle Dokumentation von Feuerwehreinsätzen ausgelegt.
 
 **Aktuelle Version:** 0.9  
 **Copyright:** T.König 2026
@@ -260,7 +260,7 @@ Benutzerkonto für die HTTP-Authentifizierung.
 
 ### `Dockerfile`
 
-Erstellt das PHP-8.3-Apache-Image inklusive SQLite-Unterstützung und persistentem Datenverzeichnis.
+Erstellt das PHP-8.5-Apache-Image inklusive SQLite-Unterstützung und persistentem Datenverzeichnis.
 
 ---
 
@@ -364,7 +364,7 @@ Anschließend im Browser den Drucker bzw. **Als PDF speichern** auswählen.
 
 ## 🛠️ Technischer Stack
 
-- PHP 8.3
+- PHP 8.5
 - Apache 2
 - SQLite
 - PDO SQLite
